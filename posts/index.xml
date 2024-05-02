@@ -9,11 +9,13 @@
     <lastBuildDate>Thu, 02 May 2024 22:18:47 +0530</lastBuildDate>
     <atom:link href="https://stym06.github.io/posts/index.xml" rel="self" type="application/rss+xml" />
     <item>
-      <title>Mypost</title>
-      <link>https://stym06.github.io/posts/mypost/</link>
+      <title>Hello World 👋🌍</title>
+      <link>https://stym06.github.io/posts/hello-world/</link>
       <pubDate>Thu, 02 May 2024 22:18:47 +0530</pubDate>
-      <guid>https://stym06.github.io/posts/mypost/</guid>
-      <description>System.out.println(&amp;#34;Hello world&amp;#34;) </description>
+      <guid>https://stym06.github.io/posts/hello-world/</guid>
+      <description>This is the first time I&amp;rsquo;m writing something on a blog of my own, guys. I must say that I never knew composing a blog using Markdown was really possible. I had set up so many blogging platforms over the years using every frontend and backend stuff I learned, but as Da Vinci had correctly said:
+&amp;ldquo;Simplicity is the ultimate sophistication.&amp;rdquo;
+So, here we are, I&amp;rsquo;m using this neat little static site generator called Hugo to build my blog finally.</description>
     </item>
   </channel>
 </rss>
