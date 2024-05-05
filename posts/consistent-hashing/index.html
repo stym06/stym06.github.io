@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en" dir="auto">
+
+<head><meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<meta name="robots" content="index, follow">
+<title>Consistent Hashing #️⃣ | Blog by Satyam</title>
+<meta name="keywords" content="">
+<meta name="description" content="The world works on distributed systems, and if there is one thing that is always happening is routing of requests. Be it how your Instagram posts go to that specific data-center or how the IPL matches being streamed are coming to us from which one of the global CDNs, all of this is a matter of effective choice of request-&gt;server mapping essentially.
+We have load balancers which do some of this.">
+<meta name="author" content="">
+<link rel="canonical" href="https://stym06.github.io/posts/consistent-hashing/">
+<link crossorigin="anonymous" href="/assets/css/stylesheet.b609c58d5c11bb90b1a54e04005d74ad1ddf22165eb79f5533967e57df9c3b50.css" integrity="sha256-tgnFjVwRu5CxpU4EAF10rR3fIhZet59VM5Z&#43;V9&#43;cO1A=" rel="preload stylesheet" as="style">
+<link rel="icon" href="https://stym06.github.io/favicon.ico">
+<link rel="icon" type="image/png" sizes="16x16" href="https://stym06.github.io/favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="https://stym06.github.io/favicon-32x32.png">
+<link rel="apple-touch-icon" href="https://stym06.github.io/apple-touch-icon.png">
+<link rel="mask-icon" href="https://stym06.github.io/safari-pinned-tab.svg">
+<meta name="theme-color" content="#2e2e33">
+<meta name="msapplication-TileColor" content="#2e2e33">
+<link rel="alternate" hreflang="en" href="https://stym06.github.io/posts/consistent-hashing/">
+<noscript>
+    <style>
+        #theme-toggle,
+        .top-link {
+            display: none;
+        }
+
+    </style>
+    <style>
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --theme: rgb(29, 30, 32);
+                --entry: rgb(46, 46, 51);
+                --primary: rgb(218, 218, 219);
+                --secondary: rgb(155, 156, 157);
+                --tertiary: rgb(65, 66, 68);
+                --content: rgb(196, 196, 197);
+                --code-block-bg: rgb(46, 46, 51);
+                --code-bg: rgb(55, 56, 62);
+                --border: rgb(51, 51, 51);
+            }
+
+            .list {
+                background: var(--theme);
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-track {
+                background: 0 0;
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-thumb {
+                border-color: var(--theme);
+            }
+        }
+
+    </style>
+</noscript>
+  
+
+<meta property="og:title" content="Consistent Hashing #️⃣" />
+<meta property="og:description" content="The world works on distributed systems, and if there is one thing that is always happening is routing of requests. Be it how your Instagram posts go to that specific data-center or how the IPL matches being streamed are coming to us from which one of the global CDNs, all of this is a matter of effective choice of request-&gt;server mapping essentially.
+We have load balancers which do some of this." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://stym06.github.io/posts/consistent-hashing/" /><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2024-05-02T22:18:47+05:30" />
+<meta property="article:modified_time" content="2024-05-02T22:18:47+05:30" />
+
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="Consistent Hashing #️⃣"/>
+<meta name="twitter:description" content="The world works on distributed systems, and if there is one thing that is always happening is routing of requests. Be it how your Instagram posts go to that specific data-center or how the IPL matches being streamed are coming to us from which one of the global CDNs, all of this is a matter of effective choice of request-&gt;server mapping essentially.
+We have load balancers which do some of this."/>
+
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position":  1 ,
+      "name": "Posts",
+      "item": "https://stym06.github.io/posts/"
+    }, 
+    {
+      "@type": "ListItem",
+      "position":  2 ,
+      "name": "Consistent Hashing #️⃣",
+      "item": "https://stym06.github.io/posts/consistent-hashing/"
+    }
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "Consistent Hashing #️⃣",
+  "name": "Consistent Hashing #️⃣",
+  "description": "The world works on distributed systems, and if there is one thing that is always happening is routing of requests. Be it how your Instagram posts go to that specific data-center or how the IPL matches being streamed are coming to us from which one of the global CDNs, all of this is a matter of effective choice of request-\u0026gt;server mapping essentially.\nWe have load balancers which do some of this.",
+  "keywords": [
+    
+  ],
+  "articleBody": "The world works on distributed systems, and if there is one thing that is always happening is routing of requests. Be it how your Instagram posts go to that specific data-center or how the IPL matches being streamed are coming to us from which one of the global CDNs, all of this is a matter of effective choice of request-\u003eserver mapping essentially.\nWe have load balancers which do some of this. They try to route the incoming requests to one of the available servers in many of the available algorithms. We have distributed clusters of databases and servers all trying to do the same thing.\nWonder what they are using?\nConsistent Hashing.\nWait, what’s Hashing, first of all, and Consistent at that?\nLet’s dive in!\nLet’s say you have a bunch of keys you want to store and retrieve and you have a bunch of servers as well. For consistency, let’s assume we have 10 keys and only 3 servers\nWe can store these keys randomly, but we won’t be able to deterministically say which one of the server did my key go to, right? Ok, so we can store them in a round-robin fashion, sounds cool? Or cooler, we can encode the data into 8-bit and take the modulo of 3, so that we get a number betwen [1 -\u003e 3], which gives us a server name. And since the encoding is also fixed, on retrieval of the key, we can again encode it, get the server name and do a fetch request for our key.\nAll fun till now. This works, Yes.\nBut imagine, if Server-2 goes down. We will have to move all our keys to one of the remaining ones, right? Or let’s say someone else also wants to send keys, we might need to add more servers. Well, for uniformity, we would need to relocate most of our keys to this new shiny server.\nTurns out this data movement operation will take all the time when doing upscaling and downnscaling. What’s a better way then?\nEnter Consistent Hashing!\nHere, we dont do the modulo thing to get the server id, but what we do is have a giant hash space where our servers reside with their hashkeys. And now, not taking the hash-collision approach of going to the index, we hash our key, and take a stroll to the right to find the first available hash. If we find it, that’s our server!\nLet’s implement this.\nOne way to implement this is using arrays and going to the right side of the array, but that takes O(n) in the worst case, so we just create a Sorted Map.\npublic class ConsistentHashing { private final MessageDigest md; private final TreeMap\u003cLong, String\u003e circle; private final int numReplicas; public ConsistentHashing(int numReplicas) throws NoSuchAlgorithmException { this.numReplicas = numReplicas; this.md = MessageDigest.getInstance(\"SHA-256\"); this.circle = new TreeMap\u003c\u003e(); } public void addServer(String key) { for(int i = 0; i \u003c numReplicas; i++) { Long hash = generateHash(key + i); circle.put(hash, key); } } public void removeServer(String key) throws Exception { for(int i = 0; i \u003c numReplicas; i++) { Long hash = generateHash(key + i); circle.remove(hash); } } public String getServer(String key) throws Exception { Long hash = generateHash(key); SortedMap\u003cLong, String\u003e tailMap = circle.tailMap(hash); Long firstServerTotheRightKey = tailMap.isEmpty() ? circle.firstKey() : tailMap.firstKey(); return circle.get(firstServerTotheRightKey); } private long generateHash(String key) { md.reset(); md.update(key.getBytes()); byte[] digest = md.digest(); long hash = ((long) (digest[3] \u0026 0xFF) \u003c\u003c 24) | ((long) (digest[2] \u0026 0xFF) \u003c\u003c 16) | ((long) (digest[1] \u0026 0xFF) \u003c\u003c 8) | ((long) (digest[0] \u0026 0xFF)); return hash; } public static void main(String[] args) throws Exception { ConsistentHashing consistentHashing = new ConsistentHashing(10); //add servers and keys final List\u003cString\u003e servers = List.of(\"s1\", \"s2\", \"s3\", \"s4\", \"s5\"); for(String server: servers) { consistentHashing.addServer(server); } //key for k1 System.out.println(\"Current location of k1 is \" + consistentHashing.getServer(\"k1\")); //remove server s5 System.out.println(\"Removing server s5\"); consistentHashing.removeServer(\"s5\"); //key for k1 System.out.println(\"New location of k1 is \" + consistentHashing.getServer(\"k1\")); } } ",
+  "wordCount" : "658",
+  "inLanguage": "en",
+  "datePublished": "2024-05-02T22:18:47+05:30",
+  "dateModified": "2024-05-02T22:18:47+05:30",
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "https://stym06.github.io/posts/consistent-hashing/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "Blog by Satyam",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "https://stym06.github.io/favicon.ico"
+    }
+  }
+}
+</script>
+</head>
+
+<body class="" id="top">
+<script>
+    if (localStorage.getItem("pref-theme") === "dark") {
+        document.body.classList.add('dark');
+    } else if (localStorage.getItem("pref-theme") === "light") {
+        document.body.classList.remove('dark')
+    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.body.classList.add('dark');
+    }
+
+</script>
+
+<header class="header">
+    <nav class="nav">
+        <div class="logo">
+            <a href="https://stym06.github.io/" accesskey="h" title="Blog by Satyam (Alt + H)">Blog by Satyam</a>
+            <div class="logo-switches">
+                <button id="theme-toggle" accesskey="t" title="(Alt + T)">
+                    <svg id="moon" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                    <svg id="sun" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <ul id="menu">
+            <li>
+                <a href="https://stym06.github.io/about/" title="About">
+                    <span>About</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://stym06.github.io/search/" title="Search (Alt &#43; /)" accesskey=/>
+                    <span>Search</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+</header>
+<main class="main">
+
+<article class="post-single">
+  <header class="post-header">
+    <div class="breadcrumbs"><a href="https://stym06.github.io/">Home</a>&nbsp;»&nbsp;<a href="https://stym06.github.io/posts/">Posts</a></div>
+    <h1 class="post-title entry-hint-parent">
+      Consistent Hashing #️⃣
+    </h1>
+    <div class="post-meta"><span title='2024-05-02 22:18:47 +0530 IST'>May 2, 2024</span>&nbsp;·&nbsp;4 min
+
+</div>
+  </header> 
+  <div class="post-content"><p>The world works on distributed systems, and if there is one thing that is always happening is routing of requests. Be it how your Instagram posts go to that specific data-center or how the IPL matches being streamed are coming to us from which one of the global CDNs, all of this is a matter of effective choice of request-&gt;server mapping essentially.</p>
+<p>We have load balancers which do some of this. They try to route the incoming requests to one of the available servers in many of the available algorithms.
+We have distributed clusters of databases and servers all trying to do the same thing.</p>
+<p>Wonder what they are using?</p>
+<p>Consistent Hashing.</p>
+<p>Wait, what&rsquo;s Hashing, first of all, and Consistent at that?</p>
+<p>Let&rsquo;s dive in!</p>
+<p>Let&rsquo;s say you have a bunch of keys you want to store and retrieve and you have a bunch of servers as well.
+For consistency, let&rsquo;s assume we have 10 keys and only 3 servers</p>
+<p>We can store these keys randomly, but we won&rsquo;t be able to deterministically say which one of the server did my key go to, right?
+Ok, so we can store them in a round-robin fashion, sounds cool?
+Or cooler, we can encode the data into 8-bit and take the modulo of 3, so that we get a number betwen [1 -&gt; 3], which gives us a server name. And since the encoding is also fixed, on retrieval of the key, we can again encode it, get the server name and do a fetch request for our key.</p>
+<p>All fun till now. This works, Yes.</p>
+<p>But imagine, if Server-2 goes down. We will have to move all our keys to one of the remaining ones, right? Or let&rsquo;s say someone else also wants to send keys, we might need to add more servers. Well, for uniformity, we would need to relocate most of our keys to this new shiny server.</p>
+<p>Turns out this data movement operation will take all the time when doing upscaling and downnscaling.
+What&rsquo;s a better way then?</p>
+<p>Enter Consistent Hashing!</p>
+<p>Here, we dont do the modulo thing to get the server id, but what we do is have a giant hash space where our servers reside with their hashkeys. And now, not taking the hash-collision approach of going to the index, we hash our key, and take a stroll to the right to find the first available hash. If we find it, that&rsquo;s our server!</p>
+<p><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/7/71/Consistent_Hashing_Sample_Illustration.png" alt="Consistent Hashing Sample Illustration"  />
+</p>
+<p>Let&rsquo;s implement this.</p>
+<p>One way to implement this is using arrays and going to the right side of the array, but that takes O(n) in the worst case, so we just create a Sorted Map.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-java" data-lang="java"><span style="display:flex;"><span><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">ConsistentHashing</span> {
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">final</span> MessageDigest md;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">final</span> TreeMap<span style="color:#f92672">&lt;</span>Long, String<span style="color:#f92672">&gt;</span> circle;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">final</span> <span style="color:#66d9ef">int</span> numReplicas;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">public</span> <span style="color:#a6e22e">ConsistentHashing</span>(<span style="color:#66d9ef">int</span> numReplicas) <span style="color:#66d9ef">throws</span> NoSuchAlgorithmException {
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">this</span>.<span style="color:#a6e22e">numReplicas</span> <span style="color:#f92672">=</span> numReplicas;
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">this</span>.<span style="color:#a6e22e">md</span> <span style="color:#f92672">=</span> MessageDigest.<span style="color:#a6e22e">getInstance</span>(<span style="color:#e6db74">&#34;SHA-256&#34;</span>);
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">this</span>.<span style="color:#a6e22e">circle</span> <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> TreeMap<span style="color:#f92672">&lt;&gt;</span>();
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">addServer</span>(String key) {
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">for</span>(<span style="color:#66d9ef">int</span> i <span style="color:#f92672">=</span> 0; i <span style="color:#f92672">&lt;</span> numReplicas; i<span style="color:#f92672">++</span>) {
+</span></span><span style="display:flex;"><span>            Long hash <span style="color:#f92672">=</span> generateHash(key <span style="color:#f92672">+</span> i);
+</span></span><span style="display:flex;"><span>            circle.<span style="color:#a6e22e">put</span>(hash, key);
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">removeServer</span>(String key) <span style="color:#66d9ef">throws</span> Exception {
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">for</span>(<span style="color:#66d9ef">int</span> i <span style="color:#f92672">=</span> 0; i <span style="color:#f92672">&lt;</span> numReplicas; i<span style="color:#f92672">++</span>) {
+</span></span><span style="display:flex;"><span>            Long hash <span style="color:#f92672">=</span> generateHash(key <span style="color:#f92672">+</span> i);
+</span></span><span style="display:flex;"><span>            circle.<span style="color:#a6e22e">remove</span>(hash);
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">public</span> String <span style="color:#a6e22e">getServer</span>(String key) <span style="color:#66d9ef">throws</span> Exception {
+</span></span><span style="display:flex;"><span>        Long hash <span style="color:#f92672">=</span> generateHash(key);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        SortedMap<span style="color:#f92672">&lt;</span>Long, String<span style="color:#f92672">&gt;</span> tailMap <span style="color:#f92672">=</span> circle.<span style="color:#a6e22e">tailMap</span>(hash);
+</span></span><span style="display:flex;"><span>        Long firstServerTotheRightKey <span style="color:#f92672">=</span> tailMap.<span style="color:#a6e22e">isEmpty</span>() <span style="color:#f92672">?</span> circle.<span style="color:#a6e22e">firstKey</span>() : tailMap.<span style="color:#a6e22e">firstKey</span>();
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> circle.<span style="color:#a6e22e">get</span>(firstServerTotheRightKey);
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">long</span> <span style="color:#a6e22e">generateHash</span>(String key) {
+</span></span><span style="display:flex;"><span>        md.<span style="color:#a6e22e">reset</span>();
+</span></span><span style="display:flex;"><span>        md.<span style="color:#a6e22e">update</span>(key.<span style="color:#a6e22e">getBytes</span>());
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">byte</span><span style="color:#f92672">[]</span> digest <span style="color:#f92672">=</span> md.<span style="color:#a6e22e">digest</span>();
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">long</span> hash <span style="color:#f92672">=</span> ((<span style="color:#66d9ef">long</span>) (digest<span style="color:#f92672">[</span>3<span style="color:#f92672">]</span> <span style="color:#f92672">&amp;</span> 0xFF) <span style="color:#f92672">&lt;&lt;</span> 24) <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span>                ((<span style="color:#66d9ef">long</span>) (digest<span style="color:#f92672">[</span>2<span style="color:#f92672">]</span> <span style="color:#f92672">&amp;</span> 0xFF) <span style="color:#f92672">&lt;&lt;</span> 16) <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span>                ((<span style="color:#66d9ef">long</span>) (digest<span style="color:#f92672">[</span>1<span style="color:#f92672">]</span> <span style="color:#f92672">&amp;</span> 0xFF) <span style="color:#f92672">&lt;&lt;</span> 8) <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span>                ((<span style="color:#66d9ef">long</span>) (digest<span style="color:#f92672">[</span>0<span style="color:#f92672">]</span> <span style="color:#f92672">&amp;</span> 0xFF));
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> hash;
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">main</span>(String<span style="color:#f92672">[]</span> args) <span style="color:#66d9ef">throws</span> Exception {
+</span></span><span style="display:flex;"><span>        ConsistentHashing consistentHashing <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> ConsistentHashing(10);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">//add servers and keys</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">final</span> List<span style="color:#f92672">&lt;</span>String<span style="color:#f92672">&gt;</span> servers <span style="color:#f92672">=</span> List.<span style="color:#a6e22e">of</span>(<span style="color:#e6db74">&#34;s1&#34;</span>, <span style="color:#e6db74">&#34;s2&#34;</span>, <span style="color:#e6db74">&#34;s3&#34;</span>, <span style="color:#e6db74">&#34;s4&#34;</span>, <span style="color:#e6db74">&#34;s5&#34;</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">for</span>(String server: servers) {
+</span></span><span style="display:flex;"><span>            consistentHashing.<span style="color:#a6e22e">addServer</span>(server);
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">//key for k1</span>
+</span></span><span style="display:flex;"><span>        System.<span style="color:#a6e22e">out</span>.<span style="color:#a6e22e">println</span>(<span style="color:#e6db74">&#34;Current location of k1 is &#34;</span> <span style="color:#f92672">+</span> consistentHashing.<span style="color:#a6e22e">getServer</span>(<span style="color:#e6db74">&#34;k1&#34;</span>));
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">//remove server s5</span>
+</span></span><span style="display:flex;"><span>        System.<span style="color:#a6e22e">out</span>.<span style="color:#a6e22e">println</span>(<span style="color:#e6db74">&#34;Removing server s5&#34;</span>);
+</span></span><span style="display:flex;"><span>        consistentHashing.<span style="color:#a6e22e">removeServer</span>(<span style="color:#e6db74">&#34;s5&#34;</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">//key for k1</span>
+</span></span><span style="display:flex;"><span>        System.<span style="color:#a6e22e">out</span>.<span style="color:#a6e22e">println</span>(<span style="color:#e6db74">&#34;New location of k1 is &#34;</span> <span style="color:#f92672">+</span> consistentHashing.<span style="color:#a6e22e">getServer</span>(<span style="color:#e6db74">&#34;k1&#34;</span>));
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div>
+
+  </div>
+
+  <footer class="post-footer">
+    <ul class="post-tags">
+    </ul>
+  </footer>
+</article>
+    </main>
+    
+<footer class="footer">
+        <span>&copy; 2024 <a href="https://stym06.github.io/">Blog by Satyam</a></span> · 
+
+    <span>
+        Powered by
+        <a href="https://gohugo.io/" rel="noopener noreferrer" target="_blank">Hugo</a> &
+        <a href="https://github.com/adityatelange/hugo-PaperMod/" rel="noopener" target="_blank">PaperMod</a>
+    </span>
+</footer>
+<a href="#top" aria-label="go to top" title="Go to Top (Alt + G)" class="top-link" id="top-link" accesskey="g">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 6" fill="currentColor">
+        <path d="M12 6H0l6-6z" />
+    </svg>
+</a>
+
+<script>
+    let menu = document.getElementById('menu')
+    if (menu) {
+        menu.scrollLeft = localStorage.getItem("menu-scroll-position");
+        menu.onscroll = function () {
+            localStorage.setItem("menu-scroll-position", menu.scrollLeft);
+        }
+    }
+
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener("click", function (e) {
+            e.preventDefault();
+            var id = this.getAttribute("href").substr(1);
+            if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView({
+                    behavior: "smooth"
+                });
+            } else {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView();
+            }
+            if (id === "top") {
+                history.replaceState(null, null, " ");
+            } else {
+                history.pushState(null, null, `#${id}`);
+            }
+        });
+    });
+
+</script>
+<script>
+    var mybutton = document.getElementById("top-link");
+    window.onscroll = function () {
+        if (document.body.scrollTop > 800 || document.documentElement.scrollTop > 800) {
+            mybutton.style.visibility = "visible";
+            mybutton.style.opacity = "1";
+        } else {
+            mybutton.style.visibility = "hidden";
+            mybutton.style.opacity = "0";
+        }
+    };
+
+</script>
+<script>
+    document.getElementById("theme-toggle").addEventListener("click", () => {
+        if (document.body.className.includes("dark")) {
+            document.body.classList.remove('dark');
+            localStorage.setItem("pref-theme", 'light');
+        } else {
+            document.body.classList.add('dark');
+            localStorage.setItem("pref-theme", 'dark');
+        }
+    })
+
+</script>
+<script>
+    document.querySelectorAll('pre > code').forEach((codeblock) => {
+        const container = codeblock.parentNode.parentNode;
+
+        const copybutton = document.createElement('button');
+        copybutton.classList.add('copy-code');
+        copybutton.innerHTML = 'copy';
+
+        function copyingDone() {
+            copybutton.innerHTML = 'copied!';
+            setTimeout(() => {
+                copybutton.innerHTML = 'copy';
+            }, 2000);
+        }
+
+        copybutton.addEventListener('click', (cb) => {
+            if ('clipboard' in navigator) {
+                navigator.clipboard.writeText(codeblock.textContent);
+                copyingDone();
+                return;
+            }
+
+            const range = document.createRange();
+            range.selectNodeContents(codeblock);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+            try {
+                document.execCommand('copy');
+                copyingDone();
+            } catch (e) { };
+            selection.removeRange(range);
+        });
+
+        if (container.classList.contains("highlight")) {
+            container.appendChild(copybutton);
+        } else if (container.parentNode.firstChild == container) {
+            
+        } else if (codeblock.parentNode.parentNode.parentNode.parentNode.parentNode.nodeName == "TABLE") {
+            
+            codeblock.parentNode.parentNode.parentNode.parentNode.parentNode.appendChild(copybutton);
+        } else {
+            
+            codeblock.parentNode.appendChild(copybutton);
+        }
+    });
+</script>
+</body>
+
+</html>

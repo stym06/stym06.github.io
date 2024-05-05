@@ -9,6 +9,14 @@
     <lastBuildDate>Thu, 02 May 2024 22:18:47 +0530</lastBuildDate>
     <atom:link href="https://stym06.github.io/posts/index.xml" rel="self" type="application/rss+xml" />
     <item>
+      <title>Consistent Hashing #️⃣</title>
+      <link>https://stym06.github.io/posts/consistent-hashing/</link>
+      <pubDate>Thu, 02 May 2024 22:18:47 +0530</pubDate>
+      <guid>https://stym06.github.io/posts/consistent-hashing/</guid>
+      <description>The world works on distributed systems, and if there is one thing that is always happening is routing of requests. Be it how your Instagram posts go to that specific data-center or how the IPL matches being streamed are coming to us from which one of the global CDNs, all of this is a matter of effective choice of request-&amp;gt;server mapping essentially.
+We have load balancers which do some of this.</description>
+    </item>
+    <item>
       <title>Hello World 👋🌍</title>
       <link>https://stym06.github.io/posts/hello-world/</link>
       <pubDate>Thu, 02 May 2024 22:18:47 +0530</pubDate>
