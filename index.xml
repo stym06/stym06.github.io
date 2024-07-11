@@ -6,8 +6,17 @@
     <description>Recent content on Blog by Satyam</description>
     <generator>Hugo -- 0.125.5</generator>
     <language>en-us</language>
-    <lastBuildDate>Thu, 02 May 2024 22:18:47 +0530</lastBuildDate>
+    <lastBuildDate>Thu, 11 Jul 2024 23:17:49 +0530</lastBuildDate>
     <atom:link href="https://stym06.github.io/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Building a Database From Scratch 💾</title>
+      <link>https://stym06.github.io/posts/build-a-db-from-scratch/</link>
+      <pubDate>Thu, 11 Jul 2024 23:17:49 +0530</pubDate>
+      <guid>https://stym06.github.io/posts/build-a-db-from-scratch/</guid>
+      <description>Hey folks, This is the introductory chapter on a series of blogs on how you can build a database from scratch by yourself.
+But Why? Why build a database, you ask? There&amp;rsquo;s plenty already. And I only care about the CRUD stuff.
+Umm, I guess most of us treat a database as a black box and dump stuff into it. But we only care about some of it if we get a connection pool failure alert on our pager.</description>
+    </item>
     <item>
       <title>Consistent Hashing #️⃣</title>
       <link>https://stym06.github.io/posts/consistent-hashing/</link>
