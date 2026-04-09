@@ -4,21 +4,16 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Consistent Hashing - Satyam Raj</title>
-  <meta name="description" content="The world works on distributed systems, and if there is one thing that is always happening is routing of requests.">
+  <meta name="description" content="Consistent Hashing">
   <meta name="author" content="Satyam Raj">
-  <link rel="canonical" href="https://stym06.github.io/posts/consistent-hashing/">
   <link rel="icon" href="/favicon.ico">
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
   <meta property="og:title" content="Consistent Hashing">
-  <meta property="og:description" content="The world works on distributed systems, and if there is one thing that is always happening is routing of requests.">
   <meta property="og:type" content="article">
-  <meta property="og:url" content="https://stym06.github.io/posts/consistent-hashing/">
-  <meta property="article:published_time" content="2024-05-02T22:18:47+05:30">
   <meta name="twitter:card" content="summary">
   <meta name="twitter:title" content="Consistent Hashing">
-  <meta name="twitter:description" content="The world works on distributed systems, and if there is one thing that is always happening is routing of requests.">
   <link rel="stylesheet" href="/assets/css/style.css">
 </head>
 <body>
@@ -43,102 +38,87 @@
 
         <div class="post-content">
           <p>The world works on distributed systems, and if there is one thing that is always happening is routing of requests. Be it how your Instagram posts go to that specific data-center or how the IPL matches being streamed are coming to us from which one of the global CDNs, all of this is a matter of effective choice of request-&gt;server mapping essentially.</p>
+<p>We have load balancers which do some of this. They try to route the incoming requests to one of the available servers in many of the available algorithms. We have distributed clusters of databases and servers all trying to do the same thing.</p>
+<p>Wonder what they are using?</p>
+<p>Consistent Hashing.</p>
+<p>Wait, what's Hashing, first of all, and Consistent at that?</p>
+<p>Let's dive in!</p>
+<p>Let's say you have a bunch of keys you want to store and retrieve and you have a bunch of servers as well. For consistency, let's assume we have 10 keys and only 3 servers</p>
+<p>We can store these keys randomly, but we won't be able to deterministically say which one of the server did my key go to, right? Ok, so we can store them in a round-robin fashion, sounds cool? Or cooler, we can encode the data into 8-bit and take the modulo of 3, so that we get a number betwen [1 -&gt; 3], which gives us a server name. And since the encoding is also fixed, on retrieval of the key, we can again encode it, get the server name and do a fetch request for our key.</p>
+<p>All fun till now. This works, Yes.</p>
+<p>But imagine, if Server-2 goes down. We will have to move all our keys to one of the remaining ones, right? Or let's say someone else also wants to send keys, we might need to add more servers. Well, for uniformity, we would need to relocate most of our keys to this new shiny server.</p>
+<p>Turns out this data movement operation will take all the time when doing upscaling and downnscaling. What's a better way then?</p>
+<p>Enter Consistent Hashing!</p>
+<p>Here, we dont do the modulo thing to get the server id, but what we do is have a giant hash space where our servers reside with their hashkeys. And now, not taking the hash-collision approach of going to the index, we hash our key, and take a stroll to the right to find the first available hash. If we find it, that's our server!</p>
+<p><img alt="Consistent Hashing Sample Illustration" src="https://upload.wikimedia.org/wikipedia/commons/7/71/Consistent_Hashing_Sample_Illustration.png" /></p>
+<p>Let's implement this.</p>
+<p>One way to implement this is using arrays and going to the right side of the array, but that takes O(n) in the worst case, so we just create a Sorted Map.</p>
+<pre><code class="language-java">public class ConsistentHashing {
 
-          <p>We have load balancers which do some of this. They try to route the incoming requests to one of the available servers in many of the available algorithms. We have distributed clusters of databases and servers all trying to do the same thing.</p>
+    private final MessageDigest md;
+    private final TreeMap&lt;Long, String&gt; circle;
+    private final int numReplicas;
 
-          <p>Wonder what they are using?</p>
-
-          <p>Consistent Hashing.</p>
-
-          <p>Wait, what's Hashing, first of all, and Consistent at that?</p>
-
-          <p>Let's dive in!</p>
-
-          <p>Let's say you have a bunch of keys you want to store and retrieve and you have a bunch of servers as well. For consistency, let's assume we have 10 keys and only 3 servers</p>
-
-          <p>We can store these keys randomly, but we won't be able to deterministically say which one of the server did my key go to, right? Ok, so we can store them in a round-robin fashion, sounds cool? Or cooler, we can encode the data into 8-bit and take the modulo of 3, so that we get a number betwen [1 -&gt; 3], which gives us a server name. And since the encoding is also fixed, on retrieval of the key, we can again encode it, get the server name and do a fetch request for our key.</p>
-
-          <p>All fun till now. This works, Yes.</p>
-
-          <p>But imagine, if Server-2 goes down. We will have to move all our keys to one of the remaining ones, right? Or let's say someone else also wants to send keys, we might need to add more servers. Well, for uniformity, we would need to relocate most of our keys to this new shiny server.</p>
-
-          <p>Turns out this data movement operation will take all the time when doing upscaling and downnscaling. What's a better way then?</p>
-
-          <p>Enter Consistent Hashing!</p>
-
-          <p>Here, we dont do the modulo thing to get the server id, but what we do is have a giant hash space where our servers reside with their hashkeys. And now, not taking the hash-collision approach of going to the index, we hash our key, and take a stroll to the right to find the first available hash. If we find it, that's our server!</p>
-
-          <p><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/7/71/Consistent_Hashing_Sample_Illustration.png" alt="Consistent Hashing Sample Illustration"></p>
-
-          <p>Let's implement this.</p>
-
-          <p>One way to implement this is using arrays and going to the right side of the array, but that takes O(n) in the worst case, so we just create a Sorted Map.</p>
-
-<pre><code class="language-java"><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">ConsistentHashing</span> {
-
-    <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">final</span> MessageDigest md;
-    <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">final</span> TreeMap&lt;Long, String&gt; circle;
-    <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">final</span> <span style="color:#66d9ef">int</span> numReplicas;
-
-    <span style="color:#66d9ef">public</span> <span style="color:#a6e22e">ConsistentHashing</span>(<span style="color:#66d9ef">int</span> numReplicas) <span style="color:#66d9ef">throws</span> NoSuchAlgorithmException {
-        <span style="color:#66d9ef">this</span>.numReplicas = numReplicas;
-        <span style="color:#66d9ef">this</span>.md = MessageDigest.getInstance(<span style="color:#e6db74">"SHA-256"</span>);
-        <span style="color:#66d9ef">this</span>.circle = <span style="color:#66d9ef">new</span> TreeMap&lt;&gt;();
+    public ConsistentHashing(int numReplicas) throws NoSuchAlgorithmException {
+        this.numReplicas = numReplicas;
+        this.md = MessageDigest.getInstance(&quot;SHA-256&quot;);
+        this.circle = new TreeMap&lt;&gt;();
     }
 
-    <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">addServer</span>(String key) {
-        <span style="color:#66d9ef">for</span>(<span style="color:#66d9ef">int</span> i = 0; i &lt; numReplicas; i++) {
+    public void addServer(String key) {
+        for(int i = 0; i &lt; numReplicas; i++) {
             Long hash = generateHash(key + i);
             circle.put(hash, key);
         }
     }
 
-    <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">removeServer</span>(String key) <span style="color:#66d9ef">throws</span> Exception {
-        <span style="color:#66d9ef">for</span>(<span style="color:#66d9ef">int</span> i = 0; i &lt; numReplicas; i++) {
+    public void removeServer(String key) throws Exception {
+        for(int i = 0; i &lt; numReplicas; i++) {
             Long hash = generateHash(key + i);
             circle.remove(hash);
         }
     }
 
-    <span style="color:#66d9ef">public</span> String <span style="color:#a6e22e">getServer</span>(String key) <span style="color:#66d9ef">throws</span> Exception {
+    public String getServer(String key) throws Exception {
         Long hash = generateHash(key);
         SortedMap&lt;Long, String&gt; tailMap = circle.tailMap(hash);
         Long firstServerTotheRightKey = tailMap.isEmpty() ? circle.firstKey() : tailMap.firstKey();
-        <span style="color:#66d9ef">return</span> circle.get(firstServerTotheRightKey);
+        return circle.get(firstServerTotheRightKey);
     }
 
-    <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">long</span> <span style="color:#a6e22e">generateHash</span>(String key) {
+    private long generateHash(String key) {
         md.reset();
         md.update(key.getBytes());
-        <span style="color:#66d9ef">byte</span>[] digest = md.digest();
-        <span style="color:#66d9ef">long</span> hash = ((<span style="color:#66d9ef">long</span>) (digest[3] &amp; 0xFF) &lt;&lt; 24) |
-                ((<span style="color:#66d9ef">long</span>) (digest[2] &amp; 0xFF) &lt;&lt; 16) |
-                ((<span style="color:#66d9ef">long</span>) (digest[1] &amp; 0xFF) &lt;&lt; 8) |
-                ((<span style="color:#66d9ef">long</span>) (digest[0] &amp; 0xFF));
-        <span style="color:#66d9ef">return</span> hash;
+        byte[] digest = md.digest();
+        long hash = ((long) (digest[3] &amp; 0xFF) &lt;&lt; 24) |
+                ((long) (digest[2] &amp; 0xFF) &lt;&lt; 16) |
+                ((long) (digest[1] &amp; 0xFF) &lt;&lt; 8) |
+                ((long) (digest[0] &amp; 0xFF));
+        return hash;
     }
 
-    <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">main</span>(String[] args) <span style="color:#66d9ef">throws</span> Exception {
-        ConsistentHashing consistentHashing = <span style="color:#66d9ef">new</span> ConsistentHashing(10);
+    public static void main(String[] args) throws Exception {
+        ConsistentHashing consistentHashing = new ConsistentHashing(10);
 
-        <span style="color:#75715e">//add servers and keys</span>
-        <span style="color:#66d9ef">final</span> List&lt;String&gt; servers = List.of(<span style="color:#e6db74">"s1"</span>, <span style="color:#e6db74">"s2"</span>, <span style="color:#e6db74">"s3"</span>, <span style="color:#e6db74">"s4"</span>, <span style="color:#e6db74">"s5"</span>);
+        //add servers and keys
+        final List&lt;String&gt; servers = List.of(&quot;s1&quot;, &quot;s2&quot;, &quot;s3&quot;, &quot;s4&quot;, &quot;s5&quot;);
 
-        <span style="color:#66d9ef">for</span>(String server: servers) {
+        for(String server: servers) {
             consistentHashing.addServer(server);
         }
 
-        <span style="color:#75715e">//key for k1</span>
-        System.out.println(<span style="color:#e6db74">"Current location of k1 is "</span> + consistentHashing.getServer(<span style="color:#e6db74">"k1"</span>));
+        //key for k1
+        System.out.println(&quot;Current location of k1 is &quot; + consistentHashing.getServer(&quot;k1&quot;));
 
-        <span style="color:#75715e">//remove server s5</span>
-        System.out.println(<span style="color:#e6db74">"Removing server s5"</span>);
-        consistentHashing.removeServer(<span style="color:#e6db74">"s5"</span>);
+        //remove server s5
+        System.out.println(&quot;Removing server s5&quot;);
+        consistentHashing.removeServer(&quot;s5&quot;);
 
-        <span style="color:#75715e">//key for k1</span>
-        System.out.println(<span style="color:#e6db74">"New location of k1 is "</span> + consistentHashing.getServer(<span style="color:#e6db74">"k1"</span>));
+        //key for k1
+        System.out.println(&quot;New location of k1 is &quot; + consistentHashing.getServer(&quot;k1&quot;));
     }
-}</code></pre>
+}
+</code></pre>
         </div>
       </article>
     </main>

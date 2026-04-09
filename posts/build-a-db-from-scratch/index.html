@@ -4,21 +4,16 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Building a Database From Scratch - Satyam Raj</title>
-  <meta name="description" content="This is the introductory chapter on a series of blogs on how you can build a database from scratch by yourself.">
+  <meta name="description" content="Building a Database From Scratch">
   <meta name="author" content="Satyam Raj">
-  <link rel="canonical" href="https://stym06.github.io/posts/build-a-db-from-scratch/">
   <link rel="icon" href="/favicon.ico">
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
   <meta property="og:title" content="Building a Database From Scratch">
-  <meta property="og:description" content="This is the introductory chapter on a series of blogs on how you can build a database from scratch by yourself.">
   <meta property="og:type" content="article">
-  <meta property="og:url" content="https://stym06.github.io/posts/build-a-db-from-scratch/">
-  <meta property="article:published_time" content="2024-07-11T23:17:49+05:30">
   <meta name="twitter:card" content="summary">
   <meta name="twitter:title" content="Building a Database From Scratch">
-  <meta name="twitter:description" content="This is the introductory chapter on a series of blogs on how you can build a database from scratch by yourself.">
   <link rel="stylesheet" href="/assets/css/style.css">
 </head>
 <body>
@@ -38,108 +33,72 @@
       <article>
         <header class="post-header">
           <h1>Building a Database From Scratch</h1>
-          <div class="post-meta">July 11, 2024 &middot; 4 min read</div>
+          <div class="post-meta">Jul 11, 2024 &middot; 4 min read</div>
         </header>
 
         <div class="post-content">
           <p>Hey folks,
-          This is the introductory chapter on a series of blogs on how you can build a database from scratch by yourself.</p>
-
-          <p>But Why? Why build a database, you ask? There's plenty already. And I only care about the CRUD stuff.</p>
-
-          <blockquote>
-            <p>Umm, I guess most of us treat a database as a black box and dump stuff into it. But we only care about some of it if we get a connection pool failure alert on our pager. We dig a bit and then tune it to fix it there. But, to really make the most of your database and most importantly the way you decide if the task requires you to use a SQL or NoSQL one, you gotta see what's the real difference in the two.</p>
-          </blockquote>
-
-          <p>This can only happen if you have built one.</p>
-
-          <h2>Some Background</h2>
-
-          <p>I've always wanted to learn how a database actually works under the hood. Two things really intrigued me:</p>
-
-          <ol>
-            <li>What the actual <code>INSERT</code> command does. I assumed it must finally be doing some sort of a <code>file.Write()</code> somewhere.</li>
-            <li>Why are there so many databases out there. What's the fight about SQL vs NoSQL vs Columnar Storage vs KV store. What's the actual difference between an OLTP and an OLAP.</li>
-          </ol>
-
-          <p>I finally decided to dig deep into the internals of it, and bought two books:</p>
-
-          <ul>
-            <li><em>Designing Data-Intensive Applications</em> by Martin Kleppmann: <a href="https://www.oreilly.com/library/view/designing-data-intensive-applications/9781491903063/">https://www.oreilly.com/library/view/designing-data-intensive-applications/9781491903063/</a></li>
-            <li><em>Database Internals</em> by Alex Petrov: <a href="https://www.oreilly.com/library/view/database-internals/9781492040330/">https://www.oreilly.com/library/view/database-internals/9781492040330/</a></li>
-          </ul>
-
-          <p>Watched a lot of CMU videos: <a href="https://www.youtube.com/watch?v=df-l2PxUidI&list=PLSE8ODhjZXjaKScG3l0nuOiDTTqpfnWFf&index=3&ab_channel=CMUDatabaseGroup">https://www.youtube.com/watch?v=df-l2PxUidI&list=PLSE8ODhjZXjaKScG3l0nuOiDTTqpfnWFf&index=3&ab_channel=CMUDatabaseGroup</a></p>
-
-          <p>But at one point, when I started getting bored with the theory, I put my foot down and decided to build one.</p>
-
-          <p>How hard could it be, I thought! Well, very much!</p>
-
-          <p>The rest of this article is about what really goes inside building a database system. There are a lot of moving parts, all of which work in harmony with each other to finally give you that simple API of <code>db.put(&lt;key&gt;, &lt;value&gt;)</code>.</p>
-
-          <p>Let's see the components of the most popular database, <code>MySQL</code>:</p>
-
-          <p><img loading="lazy" src="https://i.ytimg.com/vi/Szr4DrM4E8Q/sddefault.jpg" alt="MySQL Architecture"></p>
-
-          <p>Looking at it, we have the following components:</p>
-
-          <ol>
-            <li>DB Connectors/Client</li>
-            <li>SQL Interface API</li>
-            <li>SQL Parser</li>
-            <li>Query Optimizer</li>
-            <li>Buffer Pools</li>
-            <li>Storage Engines (InnoDB, MyRocks, MyISAM)</li>
-            <li>File System</li>
-          </ol>
-
-          <p>That's a lot of things under the hood, each with their own share of complexity.</p>
-
-          <p>I decided to break this down in a bottom-up fashion, and decided to first understand how the actual data is stored in the end. It must be something, right? Some sort of array maybe or a hashmap or some kind of data structure, right? But how do you store that on a file??</p>
-
-          <p>Thing is, you need a disk-backed data structure to efficiently store data on disk. And all of us mostly use the in-memory structures like BSTs, Hashmaps, Sets. That stuff is not really meant for disk usage because of a lot of reasons!</p>
-
-          <p>Since you got to have your database the fastest component in your system, because at the end of it, your API is going to call the database to store/retrieve, you need to use some DS that allows you to store data efficiently so that further reads can make the most of it.</p>
-
-          <p>There are some pre-requisites and theory/primer that you need to understand to move forward. I have attached some references for you to look at:</p>
-
-          <ol>
-            <li>How Disks work (HDDs, SSDs)</li>
-            <li>Understand disk-access patterns. Mainly, why Sequential i/o is better than random i/o</li>
-            <li>Handling power failures to have Integrity semantics</li>
-            <li>Disk-based data structures like B-Tree, B+ Trees, LSM</li>
-            <li>Understanding Pages and Blocks at the OS level.</li>
-            <li>File Formats (CSV, Parquet, etc). Essentially, Encoding and Compression techniques</li>
-          </ol>
-
-          <p>Now that we know a bit about everything, we can dig into the code of the most famous database on the planet: <em>SQLite</em></p>
-
-          <p>Here's a reader-friendly version to analyse parts of it: <a href="https://github.com/davideuler/SQLite-2.5.0-for-code-reading">https://github.com/davideuler/SQLite-2.5.0-for-code-reading</a></p>
-
-          <p>I have worked with Maxwell/Debezium, which are tools that let you replicate databases. I thought, where else to start than reading about this binlog stuff itself.</p>
-
-          <p>Wait, what's this <code>Binlog</code>?</p>
-
-          <p>Essentially, when you issue any query to a database, the engine first writes the command that it is going to do on a structure append-only log file. Then it issues the command (SELECT/INSERT or any command). It does so to have <code>I</code> (Integrity) in the <code>ACID</code> that it guarantees.</p>
-
-          <p>In case the db operation, let's say the INSERT fails for some reason, because of disk corruption or power failures or data center floodings, it can replay the action by reading from the log file that it had previously written to.</p>
-
-          <p>This is what we call in database terms, a <code>Write-Ahead-Log (WAL)</code> mechanism.</p>
-
-          <p>Here's some Postgres theory on it: <a href="https://www.postgresql.org/docs/current/wal-intro.html">https://www.postgresql.org/docs/current/wal-intro.html</a></p>
-
-          <p>I took the liberty to write this on my own:</p>
-
-          <p>Here's my naive implementation of a WAL: <a href="https://github.com/stym06/rebuf">https://github.com/stym06/rebuf</a>
-          And the accompanying HN post: <a href="https://news.ycombinator.com/item?id=40908178">https://news.ycombinator.com/item?id=40908178</a></p>
-
-          <p>I wrote this to understand how a simple thing like logging can be so complex, and can be so thoughtfully built.</p>
-
-          <p>The next blog will be a deep dive on the actual implementation of the WAL.</p>
-
-          <p>Till then, Bye.</p>
-
-          <p>Stay Curious!</p>
+This is the introductory chapter on a series of blogs on how you can build a database from scratch by yourself.</p>
+<p>But Why? Why build a database, you ask? There's plenty already. And I only care about the CRUD stuff.</p>
+<blockquote>
+<p>Umm, I guess most of us treat a database as a black box and dump stuff into it. But we only care about some of it if we get a connection pool failure alert on our pager. We dig a bit and then tune it to fix it there. But, to really make the most of your database and most importantly the way you decide if the task requires you to use a SQL or NoSQL one, you gotta see what's the real difference in the two.</p>
+</blockquote>
+<p>This can only happen if you have built one.</p>
+<h2>Some Background</h2>
+<p>I've always wanted to learn how a database actually works under the hood. Two things really intrigued me:</p>
+<ol>
+<li>What the actual <code>INSERT</code> command does. I assumed it must finally be doing some sort of a <code>file.Write()</code> somewhere.</li>
+<li>Why are there so many databases out there. What's the fight about SQL vs NoSQL vs Columnar Storage vs KV store. What's the actual difference between an OLTP and an OLAP.</li>
+</ol>
+<p>I finally decided to dig deep into the internals of it, and bought two books:</p>
+<ul>
+<li><em>Designing Data-Intensive Applications</em> by Martin Kleppmann: https://www.oreilly.com/library/view/designing-data-intensive-applications/9781491903063/</li>
+<li><em>Database Internals</em> by Alex Petrov: https://www.oreilly.com/library/view/database-internals/9781492040330/</li>
+</ul>
+<p>Watched a lot of CMU videos: https://www.youtube.com/watch?v=df-l2PxUidI&amp;list=PLSE8ODhjZXjaKScG3l0nuOiDTTqpfnWFf&amp;index=3&amp;ab_channel=CMUDatabaseGroup</p>
+<p>But at one point, when I started getting bored with the theory, I put my foot down and decided to build one.</p>
+<p>How hard could it be, I thought! Well, very much!</p>
+<p>The rest of this article is about what really goes inside building a database system. There are a lot of moving parts, all of which work in harmony with each other to finally give you that simple API of <code>db.put(&lt;key&gt;, &lt;value&gt;)</code>.</p>
+<p>Let's see the components of the most popular database, <code>MySQL</code>:</p>
+<p><img alt="MySQL Architecture" src="https://i.ytimg.com/vi/Szr4DrM4E8Q/sddefault.jpg" /></p>
+<p>Looking at it, we have the following components:</p>
+<ol>
+<li>DB Connectors/Client</li>
+<li>SQL Interface API</li>
+<li>SQL Parser</li>
+<li>Query Optimizer</li>
+<li>Buffer Pools</li>
+<li>Storage Engines (InnoDB, MyRocks, MyISAM)</li>
+<li>File System</li>
+</ol>
+<p>That's a lot of things under the hood, each with their own share of complexity.</p>
+<p>I decided to break this down in a bottom-up fashion, and decided to first understand how the actual data is stored in the end. It must be something, right? Some sort of array maybe or a hashmap or some kind of data structure, right? But how do you store that on a file??</p>
+<p>Thing is, you need a disk-backed data structure to efficiently store data on disk. And all of us mostly use the in-memory structures like BSTs, Hashmaps, Sets. That stuff is not really meant for disk usage because of a lot of reasons!</p>
+<p>Since you got to have your database the fastest component in your system, because at the end of it, your API is going to call the database to store/retrieve, you need to use some DS that allows you to store data efficiently so that further reads can make the most of it.</p>
+<p>There are some pre-requisites and theory/primer that you need to understand to move forward. I have attached some references for you to look at:</p>
+<ol>
+<li>How Disks work (HDDs, SSDs)</li>
+<li>Understand disk-access patterns. Mainly, why Sequential i/o is better than random i/o</li>
+<li>Handling power failures to have Integrity semantics</li>
+<li>Disk-based data structures like B-Tree, B+ Trees, LSM</li>
+<li>Understanding Pages and Blocks at the OS level.</li>
+<li>File Formats (CSV, Parquet, etc). Essentially, Encoding and Compression techniques</li>
+</ol>
+<p>Now that we know a bit about everything, we can dig into the code of the most famous database on the planet: <em>SQLite</em></p>
+<p>Here's a reader-friendly version to analyse parts of it: https://github.com/davideuler/SQLite-2.5.0-for-code-reading</p>
+<p>I have worked with Maxwell/Debezium, which are tools that let you replicate databases. I thought, where else to start than reading about this binlog stuff itself.</p>
+<p>Wait, what's this <code>Binlog</code>?</p>
+<p>Essentially, when you issue any query to a database, the engine first writes the command that it is going to do on a structure append-only log file. Then it issues the command (SELECT/INSERT or any command). It does so to have <code>I</code> (Integrity) in the <code>ACID</code> that it guarantees.</p>
+<p>In case the db operation, let's say the INSERT fails for some reason, because of disk corruption or power failures or data center floodings, it can replay the action by reading from the log file that it had previously written to.</p>
+<p>This is what we call in database terms, a <code>Write-Ahead-Log (WAL)</code> mechanism.</p>
+<p>Here's some Postgres theory on it: https://www.postgresql.org/docs/current/wal-intro.html</p>
+<p>I took the liberty to write this on my own:</p>
+<p>Here's my naive implementation of a WAL: https://github.com/stym06/rebuf
+And the accompanying HN post: https://news.ycombinator.com/item?id=40908178</p>
+<p>I wrote this to understand how a simple thing like logging can be so complex, and can be so thoughtfully built.</p>
+<p>The next blog will be a deep dive on the actual implementation of the WAL.</p>
+<p>Till then, Bye.</p>
+<p>Stay Curious!</p>
         </div>
       </article>
     </main>
